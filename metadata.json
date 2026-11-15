@@ -1,0 +1,6 @@
+{
+  "name": "BABYCRY AI",
+  "description": "BABYCRY AI – L'intelligence qui comprend les pleurs de bébé. Application intelligente d'enregistrement, d'analyse acoustique par IA et de suivi sécurisé pour les parents (FR / EN / HT).",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
