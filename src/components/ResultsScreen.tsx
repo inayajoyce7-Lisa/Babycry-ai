@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -14,15 +14,10 @@ import {
 import type { CryAnalysisRecord, CryCategory, Language, ScreenId } from '../types/babycry';
 import { TRANSLATIONS } from '../i18n/translations';
 import { ALL_CRY_CATEGORIES } from '../utils/babyDomain';
-import { ConfidenceGauge } from './ConfidenceGauge';
 
 interface ResultsScreenProps {
   language: Language;
   record: CryAnalysisRecord | null;
-  allAnalyses: CryAnalysisRecord[];
-  categoryBreakdown: Record<string, number>;
-  allowDatasetContribution: boolean;
-  onEnableDatasetContribution: () => Promise<void>;
   onSubmitFeedback: (
     id: string,
     feedback: { confirmedCategory?: CryCategory; helpful: boolean; notes?: string }
@@ -33,22 +28,33 @@ interface ResultsScreenProps {
 export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   language,
   record,
-  allAnalyses,
-  categoryBreakdown,
-  allowDatasetContribution,
-  onEnableDatasetContribution,
   onSubmitFeedback,
   onNavigate,
 }) => {
   const t = TRANSLATIONS[language];
+  const initialCategory: CryCategory =
+    record?.parentFeedback?.confirmedCategory ??
+    (record?.primaryHypothesis?.category && t.categories[record.primaryHypothesis.category]
+      ? record.primaryHypothesis.category
+      : 'hunger');
+
   const [helpful, setHelpful] = useState<boolean>(record?.parentFeedback?.helpful ?? true);
-  const [confirmedCategory, setConfirmedCategory] = useState<CryCategory>(
-    record?.parentFeedback?.confirmedCategory ?? record?.primaryHypothesis.category ?? 'hunger'
-  );
+  const [confirmedCategory, setConfirmedCategory] = useState<CryCategory>(initialCategory);
   const [savingFeedback, setSavingFeedback] = useState(false);
   const [feedbackSaved, setFeedbackSaved] = useState(Boolean(record?.parentFeedback));
 
-  if (!record) {
+  useEffect(() => {
+    setHelpful(record?.parentFeedback?.helpful ?? true);
+    const nextCat =
+      record?.parentFeedback?.confirmedCategory ??
+      (record?.primaryHypothesis?.category && t.categories[record.primaryHypothesis.category]
+        ? record.primaryHypothesis.category
+        : 'hunger');
+    setConfirmedCategory(nextCat);
+    setFeedbackSaved(Boolean(record?.parentFeedback));
+  }, [record?.id, record?.parentFeedback, record?.primaryHypothesis?.category, t.categories]);
+
+  if (!record || !record.primaryHypothesis) {
     return (
       <div className="rounded-3xl bg-white border border-slate-200/80 p-8 text-center space-y-4">
         <p className="text-slate-600">{t.home.noHistoryYet}</p>
@@ -77,7 +83,10 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
     }
   };
 
-  const primaryLabel = t.categories[record.primaryHypothesis.category].label;
+  const safePrimaryCategory: CryCategory = t.categories[record.primaryHypothesis.category]
+    ? record.primaryHypothesis.category
+    : 'unusual';
+  const primaryLabel = t.categories[safePrimaryCategory].label;
 
   return (
     <div className="space-y-6" data-testid="results-screen">
@@ -149,33 +158,26 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           </div>
         </div>
 
-        <ConfidenceGauge
-          language={language}
-          record={record}
-          allAnalyses={allAnalyses}
-          categoryBreakdown={categoryBreakdown}
-          allowDatasetContribution={allowDatasetContribution}
-          onEnableDatasetContribution={onEnableDatasetContribution}
-        />
-
         {/* Other Possibilities + Duration */}
         <div className="grid md:grid-cols-12 gap-6 pt-4 border-t border-slate-200/70">
           <div className="md:col-span-8 space-y-2">
             <p className="text-xs font-semibold text-slate-600">{t.results.otherPossibilities}</p>
             <div className="grid sm:grid-cols-2 gap-3">
-              {record.secondaryHypotheses.map((hyp, i) => (
-                <div
-                  key={`${hyp.category}-${i}`}
-                  className="rounded-xl bg-white/85 border border-slate-200/70 px-4 py-3 flex items-center justify-between gap-3"
-                >
-                  <span className="text-sm font-semibold text-slate-800">
-                    {t.categories[hyp.category].label}
-                  </span>
-                  <span className="text-sm font-mono tabular-nums font-bold text-slate-600">
-                    {hyp.confidence}%
-                  </span>
-                </div>
-              ))}
+              {(record.secondaryHypotheses ?? [])
+                .filter((hyp) => hyp && t.categories[hyp.category])
+                .map((hyp, i) => (
+                  <div
+                    key={`${hyp.category}-${i}`}
+                    className="rounded-xl bg-white/85 border border-slate-200/70 px-4 py-3 flex items-center justify-between gap-3"
+                  >
+                    <span className="text-sm font-semibold text-slate-800">
+                      {t.categories[hyp.category].label}
+                    </span>
+                    <span className="text-sm font-mono tabular-nums font-bold text-slate-600">
+                      {hyp.confidence}%
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -235,14 +237,16 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             </h2>
             <p className="text-xs text-slate-600 leading-relaxed">{record.acousticSummary}</p>
 
-            {record.observedTraits.length > 0 && (
+            {(record.observedTraits ?? []).filter((trait) => t.traits[trait]).length > 0 && (
               <div className="divide-y divide-slate-100 pt-2">
-                {record.observedTraits.map((trait) => (
-                  <div key={trait} className="py-2">
-                    <p className="text-sm font-semibold text-slate-800">{t.traits[trait].label}</p>
-                    <p className="text-xs text-slate-500">{t.traits[trait].description}</p>
-                  </div>
-                ))}
+                {(record.observedTraits ?? [])
+                  .filter((trait) => t.traits[trait])
+                  .map((trait) => (
+                    <div key={trait} className="py-2">
+                      <p className="text-sm font-semibold text-slate-800">{t.traits[trait].label}</p>
+                      <p className="text-xs text-slate-500">{t.traits[trait].description}</p>
+                    </div>
+                  ))}
               </div>
             )}
           </div>

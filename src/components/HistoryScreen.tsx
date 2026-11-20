@@ -268,7 +268,9 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 
                     <div className="flex items-baseline gap-3">
                       <h3 className="text-base font-bold text-slate-900">
-                        {t.categories[item.primaryHypothesis.category].label}
+                        {(item.primaryHypothesis?.category &&
+                          t.categories[item.primaryHypothesis.category]?.label) ||
+                          t.categories.unusual.label}
                       </h3>
                       <span className="text-sm font-mono tabular-nums font-bold text-[#6D5DF6]">
                         {item.confidence}%

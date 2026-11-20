@@ -191,7 +191,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </span>
               </div>
               <h3 className="text-lg font-bold text-slate-900">
-                {t.categories[latestAnalysis.primaryHypothesis.category].label}
+                {(latestAnalysis.primaryHypothesis?.category &&
+                  t.categories[latestAnalysis.primaryHypothesis.category]?.label) ||
+                  t.categories.unusual.label}
               </h3>
               <p className="text-sm text-slate-600 line-clamp-2">{latestAnalysis.simpleExplanation}</p>
             </div>
