@@ -1,0 +1,51 @@
+name: BabyCry-AI Android Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Compile BabyCry-AI
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Télécharger le code source
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Installer Java
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 3. Configurer Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 4. Donner les permissions à Gradle
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      # 5. Vérifier la compilation
+      - name: Build BabyCry-AI APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      # 6. Générer le fichier APK
+      - name: Upload BabyCry AI APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BabyCry-AI-APK
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
